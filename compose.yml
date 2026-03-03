@@ -5,9 +5,14 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${POSTGRES_DB:-plausible-db}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
       start_period: 1m
 
   plausible_events_db:
@@ -36,6 +41,9 @@ services:
           "CMD-SHELL",
           "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
         ]
+      interval: 5s
+      timeout: 20s
+      retries: 10
       start_period: 1m
 
   plausible:
@@ -53,45 +61,57 @@ services:
       nofile:
         soft: 65535
         hard: 65535
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:8000/api/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
     environment:
       - TMPDIR=/var/lib/plausible/tmp
       # required: https://github.com/plausible/community-edition/wiki/configuration#required
-      - BASE_URL=${BASE_URL}
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - SERVICE_URL_PLAUSIBLE
+      - BASE_URL=${SERVICE_URL_PLAUSIBLE}
+      - SECRET_KEY_BASE=${SERVICE_BASE64_64_PLAUSIBLE}
       # optional: https://github.com/plausible/community-edition/wiki/configuration#optional
       # registration: https://github.com/plausible/community-edition/wiki/configuration#registration
-      - TOTP_VAULT_KEY
-      - DISABLE_REGISTRATION
-      - ENABLE_EMAIL_VERIFICATION
-      # web: https://github.com/plausible/community-edition/wiki/configuration#web
-      - HTTP_PORT
-      - HTTPS_PORT
+      - TOTP_VAULT_KEY=${SERVICE_REALBASE64_32_TOTP}
+      - DISABLE_REGISTRATION=${DISABLE_REGISTRATION:-true}
+      - ENABLE_EMAIL_VERIFICATION=${ENABLE_EMAIL_VERIFICATION:-false}
       # databases: https://github.com/plausible/community-edition/wiki/configuration#database
-      - DATABASE_URL
-      - CLICKHOUSE_DATABASE_URL
+      - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@plausible_db:5432/${POSTGRES_DB:-plausible-db}
+      - CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible_events_db
       # Google: https://github.com/plausible/community-edition/wiki/configuration#google
-      - GOOGLE_CLIENT_ID
-      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       # geolocation: https://github.com/plausible/community-edition/wiki/configuration#ip-geolocation
-      - IP_GEOLOCATION_DB
-      - GEONAMES_SOURCE_FILE
-      - MAXMIND_LICENSE_KEY
-      - MAXMIND_EDITION
+      # - IP_GEOLOCATION_DB
+      # - GEONAMES_SOURCE_FILE
+      # - MAXMIND_LICENSE_KEY
+      # - MAXMIND_EDITION
       # email: https://github.com/plausible/community-edition/wiki/configuration#email
-      - MAILER_ADAPTER
-      - MAILER_EMAIL
-      - MAILER_NAME
-      - SMTP_HOST_ADDR
-      - SMTP_HOST_PORT
-      - SMTP_USER_NAME
-      - SMTP_USER_PWD
-      - SMTP_HOST_SSL_ENABLED
-      - POSTMARK_API_KEY
-      - MAILGUN_API_KEY
-      - MAILGUN_DOMAIN
-      - MAILGUN_BASE_URI
-      - MANDRILL_API_KEY
-      - SENDGRID_API_KEY
+      # - MAILER_ADAPTER
+      # - MAILER_EMAIL
+      # - MAILER_NAME
+      # - SMTP_HOST_ADDR
+      # - SMTP_HOST_PORT
+      # - SMTP_USER_NAME
+      # - SMTP_USER_PWD
+      # - SMTP_HOST_SSL_ENABLED
+      # - POSTMARK_API_KEY
+      # - MAILGUN_API_KEY
+      # - MAILGUN_DOMAIN
+      # - MAILGUN_BASE_URI
+      # - MANDRILL_API_KEY
+      # - SENDGRID_API_KEY
 
 volumes:
   db-data:
