@@ -29,12 +29,15 @@ services:
       # https://clickhouse.com/docs/en/operations/tips#using-less-than-16gb-of-ram
       - ./clickhouse/low-resources.xml:/etc/clickhouse-server/config.d/low-resources.xml:ro
       - ./clickhouse/default-profile-low-resources-overrides.xml:/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml:ro
+      # Requires auth on the default user, which CLICKHOUSE_SKIP_USER_SETUP leaves open.
+      - ./clickhouse/password.xml:/etc/clickhouse-server/users.d/password.xml:ro
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     environment:
       - CLICKHOUSE_SKIP_USER_SETUP=1
+      - CLICKHOUSE_DEFAULT_PASSWORD=${SERVICE_PASSWORD_CLICKHOUSE}
     healthcheck:
       test:
         [
@@ -88,7 +91,7 @@ services:
       - ENABLE_EMAIL_VERIFICATION=${ENABLE_EMAIL_VERIFICATION:-false}
       # databases: https://github.com/plausible/community-edition/wiki/configuration#database
       - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@plausible_db:5432/${POSTGRES_DB:-plausible-db}
-      - CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible_events_db
+      - CLICKHOUSE_DATABASE_URL=http://default:${SERVICE_PASSWORD_CLICKHOUSE}@plausible_events_db:8123/plausible_events_db
       # Google: https://github.com/plausible/community-edition/wiki/configuration#google
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}

@@ -1,9 +1,11 @@
 *
 !compose.yml
+!clickhouse/
 !clickhouse/logs.xml
 !clickhouse/ipv4-only.xml
 !clickhouse/low-resources.xml
 !clickhouse/default-profile-low-resources-overrides.xml
+!clickhouse/password.xml
 !README.md
 !LICENSE
 !.gitignore
